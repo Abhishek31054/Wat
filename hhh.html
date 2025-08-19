@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Water Level Dashboard</title>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+  h1 {
+    text-align: center;
+  }
+  .status {
+    display: flex;
+    flex-direction: column;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 10px;
+    border: 2px solid #333;
+    border-radius: 8px;
+  }
+  .metric {
+    margin: 10px 0;
+    font-size: 1.2em;
+  }
+  .sensors {
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+  }
+  .sensor {
+    margin: 5px 0;
+    font-size: 1.1em;
+  }
+  .controls {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  button {
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 1em;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<h1>Water Level Dashboard</h1>
+<div class="status">
+  <div class="metric">Water Level: <span id="waterLevel">0%</span></div>
+  <div class="metric">Dry Run: <span id="dryRunStatus">DRY</span></div>
+  <div class="metric">Motor Status: <span id="motorStatus">OFF</span></div>
+  <div class="metric">Water Tank Filling: <span id="waterTankStatus">Idle</span></div>
+  <div class="sensors" id="sensorStatuses">
+    <!-- Sensor statuses will be inserted here -->
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="setMotor(true)">Motor ON</button>
+  <button onclick="setMotor(false)">Motor OFF</button>
+</div>
+
+<script>
+  // TODO: Replace with your Firebase project configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1ARR3AbTpPXZ5YD4yY9RvgDAFtux5OzY",
+  authDomain: "water-level-3c52a.firebaseapp.com",
+  databaseURL: "https://water-level-3c52a-default-rtdb.firebaseio.com",
+  projectId: "water-level-3c52a",
+  storageBucket: "water-level-3c52a.firebasestorage.app",
+  messagingSenderId: "975946187055",
+  appId: "1:975946187055:web:e3914a13661bfc08cc21da",
+  measurementId: "G-PXKHH32NY0"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Database references
+  const waterPercentRef = db.ref('/water/percent');
+  const sensorsRef = db.ref('/water/sensors');
+  const motorStateRef = db.ref('/motor/state');
+  const dryRunRef = db.ref('/water/dry_run');
+  const waterTankRef = db.ref('/water/tank_full');
+
+  // UI elements
+  const waterLevelSpan = document.getElementById('waterLevel');
+  const dryRunSpan = document.getElementById('dryRunStatus');
+  const motorStatusSpan = document.getElementById('motorStatus');
+  const waterTankStatusSpan = document.getElementById('waterTankStatus');
+  const sensorContainer = document.getElementById('sensorStatuses');
+
+  // Initialize water level to 0%
+  waterLevelSpan.innerText = "0%";
+
+  // Listen for water level updates
+  waterPercentRef.on('value', (snapshot) => {
+    const level = snapshot.val();
+    waterLevelSpan.innerText = level !== null ? level + '%' : '0%';
+
+    // Check if tank full
+    if (level !== null && level >= 100) {
+      waterTankStatusSpan.innerText = 'Full - Filling Stopped';
+      waterTankStatusSpan.style.color = 'red';
+    } else {
+      waterTankStatusSpan.innerText = 'Idle';
+      waterTankStatusSpan.style.color = 'green';
+    }
+  });
+
+  // Listen for dry run status
+  dryRunRef.on('value', (snapshot) => {
+    const status = snapshot.val();
+    document.getElementById('dryRunStatus').innerText = status ? 'DRY' : 'OK';
+  });
+
+  // Listen for sensor statuses
+  sensorsRef.on('value', (snapshot) => {
+    const sensors = snapshot.val();
+    sensorContainer.innerHTML = '';
+    if (sensors) {
+      for (const [sensor, status] of Object.entries(sensors)) {
+        const div = document.createElement('div');
+        div.className = 'sensor';
+        // 🟥 red when OFF, 🟩 green when ON
+        const color = status === 'ON' ? '🟩' : '🟥';
+        div.innerText = `${sensor}: ${color} ${status}`;
+        sensorContainer.appendChild(div);
+      }
+    } else {
+      sensorContainer.innerText = 'No sensor data';
+    }
+  });
+
+  // Listen for motor status
+  motorStateRef.on('value', (snapshot) => {
+    const state = snapshot.val();
+    document.getElementById('motorStatus').innerText = (state === 1) ? 'ON' : 'OFF';
+  });
+
+  // Button functions to control motor manually
+  function setMotor(on) {
+    db.ref('/motor/set').set(on ? 1 : 0);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Water Level Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align:center; margin-top:20px;}
+    #tank { width:100px; height:300px; border:2px solid #000; margin:20px auto; position:relative; background:#e0e0e0; }
+    #water { width:100%; position:absolute; bottom:0; background: #00bfff; }
+    .status { font-weight:bold; margin:10px; }
+    button { margin:5px; padding:10px 20px; }
+    #loginDiv { margin-top:50px; }
+  </style>
+</head>
+<body>
+
+<div id="loginDiv">
+  <h2>💧 Login to Water Level Dashboard</h2>
+  <input type="email" id="email" value="ksabhishek010@gmail.com"><br><br>
+  <input type="password" id="password" value="Abhijith06"><br><br>
+  <button onclick="login()">Login</button>
+  <p id="loginMsg"></p>
+</div>
+
+<div id="dashboard" style="display:none;">
+  <h2>💧 Water Level Monitoring</h2>
+  <div id="tank">
+    <div id="water" style="height:0%"></div>
+  </div>
+  <p class="status">Water Level: <span id="level">--%</span></p>
+  <p class="status">Motor: <span id="motor">--</span></p>
+  <p class="status">Dry Run: <span id="dryrun">--</span></p>
+  <button onclick="setMotor(1)">Motor ON</button>
+  <button onclick="setMotor(0)">Motor OFF</button>
+</div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1ARR3AbTpPXZ5YD4yY9RvgDAFtux5OzY",
+    authDomain: "water-level-3c52a.firebaseapp.com",
+    databaseURL: "https://water-level-3c52a-default-rtdb.firebaseio.com",
+    projectId: "water-level-3c52a",
+    storageBucket: "water-level-3c52a.firebasestorage.app",
+    messagingSenderId: "975946187055",
+    appId: "1:975946187055:web:e3914a13661bfc08cc21da",
+    measurementId: "G-PXKHH32NY0"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  // Login function
+  function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        document.getElementById("loginDiv").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        initDashboard();
+      })
+      .catch(err => {
+        document.getElementById("loginMsg").innerText = err.message;
+      });
+  }
+
+  // Dashboard initialization
+  function initDashboard() {
+    // Water level
+    db.ref("/water/percent").on("value", snap => {
+      const level = snap.val() || 0;
+      document.getElementById("level").innerText = level + "%";
+      document.getElementById("water").style.height = level + "%";
+    });
+
+    // Motor
+    db.ref("/motor/state").on("value", snap => {
+      const motor = snap.val();
+      document.getElementById("motor").innerText = motor == 1 ? "ON" : "OFF";
+    });
+
+    // Dry run
+    db.ref("/dryRun").on("value", snap => {
+      const dry = snap.val();
+      document.getElementById("dryrun").innerText = dry || "--";
+    });
+  }
+
+  // Motor control
+  function setMotor(state) {
+    db.ref("/control/manual").set(true);
+    db.ref("/control/motor_set").set(state);
+  }
+</script>
+</body>
+</html>
